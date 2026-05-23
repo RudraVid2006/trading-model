@@ -56,6 +56,7 @@ class BacktestMetrics:
     win_rate_pct: float
     num_trades: int
     exposure_pct: float
+    strategy: str = "MA"
 
     def format_row(self) -> str:
         return (
@@ -72,16 +73,18 @@ class BacktestMetrics:
 def split_in_out_sample(
     df: pd.DataFrame,
     in_sample_frac: float = IN_SAMPLE_FRAC,
+    *,
+    min_warmup: int = SLOW_WINDOW,
 ) -> tuple[pd.DataFrame, pd.DataFrame, Period, Period]:
     """Split by time: older rows in-sample, recent rows out-of-sample."""
     if not 0.0 < in_sample_frac < 1.0:
         raise ValueError("in_sample_frac must be between 0 and 1")
     df = df.sort_index()
     split_idx = int(len(df) * in_sample_frac)
-    if split_idx < SLOW_WINDOW + 5 or len(df) - split_idx < 30:
+    if split_idx < min_warmup + 5 or len(df) - split_idx < 30:
         raise ValueError(
             f"Not enough rows to split (have {len(df)}, need room for "
-            f"{SLOW_WINDOW}-day MA and OOS window)"
+            f"{min_warmup}-bar warmup and OOS window)"
         )
     in_df = df.iloc[:split_idx].copy()
     out_df = df.iloc[split_idx:].copy()
@@ -125,6 +128,8 @@ def extract_metrics(
     ticker: str,
     period_label: str,
     stats: pd.Series,
+    *,
+    strategy: str = "MA",
 ) -> BacktestMetrics:
     """Pull the metrics we care about from backtesting.py output."""
     return BacktestMetrics(
@@ -136,6 +141,7 @@ def extract_metrics(
         win_rate_pct=float(stats["Win Rate [%]"]) if pd.notna(stats["Win Rate [%]"]) else float("nan"),
         num_trades=int(stats["# Trades"]),
         exposure_pct=float(stats["Exposure Time [%]"]),
+        strategy=strategy,
     )
 
 

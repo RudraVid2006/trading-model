@@ -4,6 +4,9 @@ venv/
 # Cached price data (regenerated from yfinance)
 data/
 
+# Trained ML artifacts (regenerate with src/train.py)
+models/
+
 # Secrets
 .env
 
